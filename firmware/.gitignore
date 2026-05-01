@@ -1,0 +1,11 @@
+# ESP-IDF generated files
+**/build/
+**/sdkconfig
+**/sdkconfig.old
+**/managed_components/
+
+# Local credentials — never commit
+**/sdkconfig.defaults.local
+
+# Generated from .tflite via fetch_model.sh — do not commit
+**/model_data.cc
