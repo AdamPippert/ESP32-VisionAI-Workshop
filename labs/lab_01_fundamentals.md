@@ -85,28 +85,45 @@ The script prints whether the model fits alongside the camera frame buffer and w
 
 ---
 
-## Exercise 1.3 — Run the Person Detection Demo
+## Exercise 1.3 — Preview the Completed Inference Pipeline
 
-Espressif ships a TFLM person detection example. Flash it and watch inference happen live:
+Before implementing the pipeline yourself in Lab 2, flash the completed
+`lab_02` firmware and observe what the finished system looks like.
 
 ```bash
-cd ~/esp/esp-idf/examples/tensorflow/person_detection
-idf.py set-target esp32s3
-idf.py build flash monitor
+# One-time: generate the model C array (downloads ~300 KB .tflite)
+bash firmware/tools/fetch_model.sh
+
+# Build and flash
+bash firmware/tools/build.sh lab_02 flash
 ```
 
-Serial output will print `person` or `no person` roughly every 200–500 ms.
+Then open the serial monitor:
+```bash
+bash firmware/tools/build.sh lab_02 monitor
+```
+
+You should see output like:
+```
+  [   0]  no person     score=  54  |  prep=1ms  infer=382ms  total=383ms
+  [   1]  no person     score=  47  |  prep=1ms  infer=384ms  total=385ms
+  [   2]  person        score=  81  |  prep=1ms  infer=382ms  total=383ms
+```
+
+> **No hardware?** The firmware falls back to simulation mode automatically
+> (see the Wokwi section in Lab 2). Run the Wokwi simulator and you'll see
+> the same output tagged `[SIM]`.
 
 **Discussion questions:**
 1. How many milliseconds does a single inference take?
-2. What happens to FPS when inference is running vs Lab 1.1 baseline?
-3. What would change if you switched from QVGA to VGA resolution?
+2. What is the end-to-end FPS vs your Lab 1.1 camera-only baseline?
+3. Preprocessing takes ~1 ms. Where does the remaining time go?
 
 ---
 
 ## Checkpoint
 
-- [ ] Camera throughput measured and recorded
-- [ ] Model budget script run and output understood
-- [ ] Person detection demo running with live inference output
+- [ ] Camera throughput measured and recorded for all four configurations
+- [ ] Model budget script run and budget understood
+- [ ] lab_02 firmware flashed and inference output observed live
 - [ ] Can explain the camera buffer / PSRAM tradeoff in your own words
