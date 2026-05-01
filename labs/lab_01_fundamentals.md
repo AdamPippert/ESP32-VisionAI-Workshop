@@ -17,6 +17,9 @@
 
 ## Exercise 1.1 — Measure Raw Camera Throughput
 
+> **No hardware?** Skip to exercise 1.2 and use the reference numbers in the
+> table below — you'll validate the inference side in exercise 1.3 with Wokwi.
+
 Before adding any AI, establish a baseline: how fast can the ESP32 capture and encode frames?
 
 ```c
@@ -98,7 +101,7 @@ bash firmware/tools/fetch_model.sh
 bash firmware/tools/build.sh lab_02 flash
 ```
 
-Then open the serial monitor:
+**Hardware:** open the serial monitor:
 ```bash
 bash firmware/tools/build.sh lab_02 monitor
 ```
@@ -110,9 +113,22 @@ You should see output like:
   [   2]  person        score=  81  |  prep=1ms  infer=382ms  total=383ms
 ```
 
-> **No hardware?** The firmware falls back to simulation mode automatically
-> (see the Wokwi section in Lab 2). Run the Wokwi simulator and you'll see
-> the same output tagged `[SIM]`.
+**No hardware — Wokwi path:**
+
+If you haven't already done this in Lab 0:
+```bash
+bash firmware/tools/fetch_model.sh
+bash firmware/tools/build.sh lab_02 build
+```
+Open the `firmware/lab_02/` folder in VS Code and press **F1 → Wokwi: Start
+Simulator**. The serial panel will show the same inference output tagged `[SIM]`:
+```
+W (500) lab_02: Camera init failed — entering simulation mode
+  [   0]  no person     score=  54  |  prep=1ms  infer=382ms  total=383ms  [SIM]
+  [   1]  no person     score=  47  |  prep=1ms  infer=384ms  total=385ms  [SIM]
+```
+The inference latency and FPS figures are identical to hardware — only the
+camera capture step is replaced by the synthetic frame generator.
 
 **Discussion questions:**
 1. How many milliseconds does a single inference take?
@@ -123,7 +139,7 @@ You should see output like:
 
 ## Checkpoint
 
-- [ ] Camera throughput measured and recorded for all four configurations
 - [ ] Model budget script run and budget understood
-- [ ] lab_02 firmware flashed and inference output observed live
 - [ ] Can explain the camera buffer / PSRAM tradeoff in your own words
+- [ ] Inference output observed (hardware: live serial; Wokwi: `[SIM]` output)
+- [ ] **Hardware only:** camera throughput measured for all four configurations

@@ -1,7 +1,10 @@
 # Lab 0 — Environment Setup
 
 **Duration:** 30 minutes  
-**Goal:** Install the toolchain, flash the camera test firmware, and see a live video stream in your browser.
+**Goal:** Install the toolchain and verify your build environment. If you have hardware, flash the camera test firmware and see a live video stream. If not, verify the build with the Wokwi simulator instead.
+
+> **No physical hardware?** Complete sections 1–3, then jump to the
+> [Wokwi path](#wokwi-path-no-hardware) and skip sections 4–8.
 
 ---
 
@@ -68,7 +71,48 @@ cd ESP32-VisionAI-Workshop
 
 ---
 
-## 4. Set Your WiFi Credentials
+---
+
+## Wokwi Path (no hardware)
+
+The `camera_test` firmware requires a physical OV3660 and has no simulation
+fallback. Instead, verify your toolchain by building `lab_02` and running it
+in Wokwi — the full TFLM inference pipeline runs with synthetic frames.
+
+**Step 1 — Install the Wokwi VS Code extension**
+
+Open VS Code → Extensions → search **"Wokwi"** → Install. A free account is
+required; sign in at [wokwi.com](https://wokwi.com) and follow the extension's
+"Activate License" prompt.
+
+**Step 2 — Generate the model file and build**
+
+```bash
+bash firmware/tools/fetch_model.sh   # downloads person_detect.tflite, generates model_data.cc
+bash firmware/tools/build.sh lab_02 build
+```
+
+**Step 3 — Start the simulator**
+
+Open the `firmware/lab_02/` folder in VS Code. Press **F1 → Wokwi: Start
+Simulator**. The serial panel should show:
+
+```
+W (500) lab_02: Camera init failed — entering simulation mode
+=== SIMULATION MODE — synthetic frames (no camera) ===
+
+  [   0]  no person     score=  54  |  prep=1ms  infer=382ms  total=383ms  [SIM]
+  [   1]  no person     score=  47  |  prep=1ms  infer=384ms  total=385ms  [SIM]
+```
+
+Every line tagged `[SIM]` confirms the toolchain, IDF component manager,
+TFLM, and Wokwi integration are all working.
+
+**Your checkpoint replaces sections 5–8:** skip to [What's Next](#whats-next).
+
+---
+
+## 4. Set Your WiFi Credentials (hardware only)
 
 The `camera_test` firmware streams live video over WiFi. Create a local credentials file
 (**not committed to git**):
@@ -84,7 +128,7 @@ Replace `YourNetworkName` and `YourPassword` with your actual WiFi credentials.
 
 ---
 
-## 5. Connect the Board
+## 5. Connect the Board (hardware only)
 
 1. Use the **UART USB-C port** (on most boards this is the port *closer* to the camera
    lens — check the silkscreen or your board's documentation).
@@ -100,7 +144,7 @@ export PORT=/dev/cu.usbserial-110   # macOS example — adjust to your port
 
 ---
 
-## 6. Build and Flash the Camera Test Firmware
+## 6. Build and Flash the Camera Test Firmware (hardware only)
 
 ```bash
 cd firmware/camera_test
@@ -116,7 +160,7 @@ Flash takes about 15–20 seconds. When done, the board resets automatically.
 
 ---
 
-## 7. Read the Serial Output
+## 7. Read the Serial Output (hardware only)
 
 ```bash
 idf.py -p $PORT monitor
@@ -135,7 +179,7 @@ Press **Ctrl+]** to exit the monitor.
 
 ---
 
-## 8. View the Camera Stream
+## 8. View the Camera Stream (hardware only)
 
 Open the IP address from step 7 in any browser:
 ```
@@ -148,11 +192,16 @@ You should see a live MJPEG stream from the OV3660 camera at around 25–30 FPS.
 
 ## Checkpoint
 
+**Hardware path:**
 - [ ] `idf.py build` completes cleanly
 - [ ] Board flashes and boots without errors
 - [ ] IP address appears in serial output
 - [ ] Live camera stream visible in browser
 - [ ] Serial shows "Camera init success"
+
+**Wokwi path:**
+- [ ] `bash firmware/tools/build.sh lab_02 build` completes cleanly
+- [ ] Wokwi simulator starts and serial panel shows inference output tagged `[SIM]`
 
 ---
 
@@ -171,4 +220,5 @@ You should see a live MJPEG stream from the OV3660 camera at around 25–30 FPS.
 
 ## What's Next
 
-With the camera streaming, move on to **Lab 1** to measure raw camera throughput and understand the memory constraints you'll be working within.
+<a name="whats-next"></a>
+Move on to **Lab 1** to understand the edge AI constraints you'll work within and preview the inference pipeline you'll build in Lab 2. Hardware users will measure live camera throughput; Wokwi users will use the reference numbers in the table and run the Wokwi simulator for exercise 1.3.
