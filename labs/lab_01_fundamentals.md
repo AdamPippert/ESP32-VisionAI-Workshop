@@ -22,43 +22,42 @@
 
 Before adding any AI, establish a baseline: how fast can the ESP32 capture and encode frames?
 
+Build and flash `lab_01`, then open the monitor:
+```bash
+bash firmware/tools/build.sh lab_01 flash
+bash firmware/tools/build.sh lab_01 monitor
+```
+
+The firmware runs all four configurations back-to-back and prints a results table. The core of the benchmark loop *(simplified — the actual firmware in `firmware/lab_01/main/main.c` iterates four configurations)*:
+
 ```c
-// firmware/lab_01/main/main.c
-#include "esp_camera.h"
-#include "esp_log.h"
-#include "esp_timer.h"
+camera_config_t cfg = {
+    .pixel_format = PIXFORMAT_GRAYSCALE,
+    .frame_size   = FRAMESIZE_QVGA,   // 320×240
+    .fb_count     = 2,
+    .grab_mode    = CAMERA_GRAB_LATEST,
+    // ... pin assignments from camera_pins.h
+};
+ESP_ERROR_CHECK(esp_camera_init(&cfg));
 
-static const char *TAG = "lab01";
-
-void app_main(void) {
-    camera_config_t config = CAMERA_CONFIG_DEFAULT();  // defined in camera_pins.h
-    config.frame_size = FRAMESIZE_QVGA;  // 320x240
-    config.pixel_format = PIXFORMAT_GRAYSCALE;
-    ESP_ERROR_CHECK(esp_camera_init(&config));
-
-    int frames = 0;
-    int64_t start = esp_timer_get_time();
-    while (frames < 100) {
-        camera_fb_t *fb = esp_camera_fb_get();
-        if (fb) {
-            esp_camera_fb_return(fb);
-            frames++;
-        }
-    }
-    int64_t elapsed_us = esp_timer_get_time() - start;
-    ESP_LOGI(TAG, "100 frames in %.2f s = %.1f FPS",
-             elapsed_us / 1e6, 100.0 / (elapsed_us / 1e6));
+int64_t t0 = esp_timer_get_time();
+for (int i = 0; i < 100; i++) {
+    camera_fb_t *fb = esp_camera_fb_get();
+    if (fb) esp_camera_fb_return(fb);
 }
+int64_t elapsed_us = esp_timer_get_time() - t0;
+printf("100 frames in %.2f s = %.1f FPS\n",
+       elapsed_us / 1e6, 100.0 / (elapsed_us / 1e6));
 ```
 
 **Expected results (OV3660, ESP32-S3 @ 240 MHz):**
 
-| Config | FPS | Avg frame |
+| Config | FPS (reference) | Avg frame |
 |---|---|---|
-| QQVGA grayscale (160×120) | ~22 | ~19 KB |
-| QVGA grayscale (320×240) | ~11 | ~75 KB |
-| QVGA JPEG (320×240) | ~28 | ~2 KB |
-| VGA JPEG (640×480) | ~26 | ~8 KB |
+| QQVGA grayscale (160×120) | 22.2 | ~19 KB |
+| QVGA grayscale (320×240) | 11.1 | ~75 KB |
+| QVGA JPEG (320×240) | 27.8 | ~2 KB |
+| VGA JPEG (640×480) | 26.4 | ~8 KB |
 
 Notice JPEG outperforms raw grayscale — smaller DMA transfer wins over the JPEG encoder overhead. Record your numbers and compare after adding inference in Lab 2.
 
@@ -84,6 +83,11 @@ python3 model_budget.py \
 
 The script prints whether the model fits alongside the camera frame buffer and what's left for activations.
 
+> **Note on tensor arena:** Without `--arena_kb`, the script estimates the
+> arena as 2× the model size (600 KB). The actual arena in `lab_02` is 120 KB
+> (`kArenaSize` in `inference.cc`). Add `--arena_kb 120` for an accurate
+> budget; the 2× default is deliberately conservative for planning purposes.
+
 **Key insight:** A MobileNetV1 0.25× quantized to INT8 at 96×96 input is ~300 KB — fits comfortably. A full MobileNetV2 at 224×224 does not.
 
 ---
@@ -106,11 +110,11 @@ bash firmware/tools/build.sh lab_02 flash
 bash firmware/tools/build.sh lab_02 monitor
 ```
 
-You should see output like:
+You should see output like (scores vary with what the camera sees):
 ```
-  [   0]  no person     score=  54  |  prep=1ms  infer=382ms  total=383ms
-  [   1]  no person     score=  47  |  prep=1ms  infer=384ms  total=385ms
-  [   2]  person        score=  81  |  prep=1ms  infer=382ms  total=383ms
+  [   0]  no person     score=  23  |  prep=1ms  infer=382ms  total=383ms
+  [   1]  no person     score= -12  |  prep=1ms  infer=382ms  total=383ms
+  [   2]  person        score=  67  |  prep=1ms  infer=382ms  total=383ms
 ```
 
 **No hardware — Wokwi path:**
@@ -121,14 +125,14 @@ bash firmware/tools/fetch_model.sh
 bash firmware/tools/build.sh lab_02 build
 ```
 Open the `firmware/lab_02/` folder in VS Code and press **F1 → Wokwi: Start
-Simulator**. The serial panel will show the same inference output tagged `[SIM]`:
+Simulator**. The serial panel will show inference output tagged `[SIM]`:
 ```
 W (500) lab_02: Camera init failed — entering simulation mode
   [   0]  no person     score=  54  |  prep=1ms  infer=382ms  total=383ms  [SIM]
-  [   1]  no person     score=  47  |  prep=1ms  infer=384ms  total=385ms  [SIM]
+  [   1]  no person     score=  47  |  prep=1ms  infer=382ms  total=383ms  [SIM]
 ```
-The inference latency and FPS figures are identical to hardware — only the
-camera capture step is replaced by the synthetic frame generator.
+The `[SIM]` scores are deterministic (synthetic frames). The inference latency
+is identical to hardware — only the camera capture step differs.
 
 **Discussion questions:**
 1. How many milliseconds does a single inference take?
