@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# build.sh — Build (and optionally flash) an ESP32-S3 lab project.
+# build.sh — Build, flash, or monitor an ESP32-S3 lab project.
 #
 # Usage:
-#   bash firmware/tools/build.sh lab_01               # build only
-#   bash firmware/tools/build.sh lab_02 flash         # build + flash
-#   bash firmware/tools/build.sh camera_test flash    # build + flash camera_test
+#   bash firmware/tools/build.sh lab_01                # build only
+#   bash firmware/tools/build.sh lab_02 flash          # build + flash
+#   bash firmware/tools/build.sh lab_02 monitor        # open serial monitor
+#   bash firmware/tools/build.sh camera_test flash     # build + flash camera_test
 #
 # PORT env var overrides the default serial port:
 #   PORT=/dev/ttyUSB0 bash firmware/tools/build.sh lab_02 flash
@@ -15,7 +16,7 @@ LAB="${1:-}"
 ACTION="${2:-build}"
 
 if [ -z "$LAB" ]; then
-  echo "Usage: $0 <lab_name> [build|flash]"
+  echo "Usage: $0 <lab_name> [build|flash|monitor]"
   echo "  e.g. $0 lab_02 flash"
   exit 1
 fi

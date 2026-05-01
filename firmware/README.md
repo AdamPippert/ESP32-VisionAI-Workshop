@@ -83,6 +83,6 @@ real hardware run.
 | lab_01 | Camera throughput — QVGA gray | 11.1 FPS |
 | lab_01 | Camera throughput — QVGA JPEG | 27.8 FPS |
 | lab_01 | Camera throughput — VGA JPEG | 26.4 FPS |
-| lab_02 | End-to-end inference (person detect) | 2.6 FPS / 384ms |
+| lab_02 | End-to-end inference (person detect) | 2.6 FPS / 383ms |
 | lab_02 | TFLM invoke latency | 382 ms |
 | lab_02 | Preprocessing 320×240 → 96×96 | 1 ms |

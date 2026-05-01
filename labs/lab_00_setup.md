@@ -28,7 +28,7 @@ Run all commands in **Git Bash** (not PowerShell or CMD).
 
 ---
 
-## 2. Install ESP-IDF v5.4
+## 2. Install ESP-IDF v5.4.1
 
 ```bash
 git clone --recursive https://github.com/espressif/esp-idf.git ~/esp/esp-idf
@@ -68,8 +68,6 @@ idf.py --version   # should print "ESP-IDF v5.4.1"
 git clone https://github.com/AdamPippert/ESP32-VisionAI-Workshop.git
 cd ESP32-VisionAI-Workshop
 ```
-
----
 
 ---
 
@@ -147,23 +145,20 @@ export PORT=/dev/cu.usbserial-110   # macOS example — adjust to your port
 ## 6. Build and Flash the Camera Test Firmware (hardware only)
 
 ```bash
-cd firmware/camera_test
-idf.py set-target esp32s3
-idf.py build
-idf.py -p $PORT flash
+PORT=/dev/cu.usbserial-110 bash firmware/tools/build.sh camera_test flash
 ```
 
-> **If `idf.py` is not found:** you need to re-source the IDF environment.  
-> Run `. ~/esp/esp-idf/export.sh` and try again.
+Substitute your port from section 5. Flash takes about 15–20 seconds; the board resets automatically when done.
 
-Flash takes about 15–20 seconds. When done, the board resets automatically.
+> **Tip:** `build.sh` handles IDF environment setup internally — no need to
+> source `esp_env.sh` or `export.sh` first when using the script.
 
 ---
 
 ## 7. Read the Serial Output (hardware only)
 
 ```bash
-idf.py -p $PORT monitor
+PORT=/dev/cu.usbserial-110 bash firmware/tools/build.sh camera_test monitor
 ```
 
 Expected output:
@@ -193,7 +188,7 @@ You should see a live MJPEG stream from the OV3660 camera at around 25–30 FPS.
 ## Checkpoint
 
 **Hardware path:**
-- [ ] `idf.py build` completes cleanly
+- [ ] `bash firmware/tools/build.sh camera_test build` completes cleanly
 - [ ] Board flashes and boots without errors
 - [ ] IP address appears in serial output
 - [ ] Live camera stream visible in browser
