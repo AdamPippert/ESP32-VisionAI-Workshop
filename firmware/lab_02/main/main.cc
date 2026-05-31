@@ -4,6 +4,8 @@
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "esp_camera.h"
+#include "driver/temperature_sensor.h"
+#include "led_strip.h"
 
 #include "camera_pins.h"
 #include "model_data.h"
@@ -11,6 +13,52 @@
 #include "inference.h"
 
 static const char *TAG = "lab_02";
+
+#define USER_LED_GPIO 48
+
+static temperature_sensor_handle_t s_temp_sensor = NULL;
+
+static led_strip_handle_t s_led_strip = NULL;
+
+static void led_strip_init(void)
+{
+    led_strip_config_t strip_cfg = {};
+    strip_cfg.strip_gpio_num = USER_LED_GPIO;
+    strip_cfg.max_leds = 1;
+    strip_cfg.led_model = LED_MODEL_WS2812;
+    strip_cfg.color_component_format = LED_STRIP_COLOR_COMPONENT_FMT_GRB;
+    led_strip_rmt_config_t rmt_cfg = {};
+    rmt_cfg.clk_src = RMT_CLK_SRC_DEFAULT;
+    rmt_cfg.resolution_hz = 10 * 1000 * 1000;
+    ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_cfg, &rmt_cfg, &s_led_strip));
+    led_strip_clear(s_led_strip);
+}
+
+// Set the user LED: blue = person, red = no person
+static void led_set_detection(bool person_detected)
+{
+    if (!s_led_strip) return;
+    if (person_detected) {
+        led_strip_set_pixel(s_led_strip, 0, 0, 0, 32);   // blue
+    } else {
+        led_strip_set_pixel(s_led_strip, 0, 32, 0, 0);   // red
+    }
+    led_strip_refresh(s_led_strip);
+}
+
+static void temp_sensor_init(void)
+{
+    temperature_sensor_config_t cfg = TEMPERATURE_SENSOR_CONFIG_DEFAULT(20, 100);
+    ESP_ERROR_CHECK(temperature_sensor_install(&cfg, &s_temp_sensor));
+    ESP_ERROR_CHECK(temperature_sensor_enable(s_temp_sensor));
+}
+
+static float chip_temp_celsius(void)
+{
+    float t = 0.0f;
+    if (s_temp_sensor) temperature_sensor_get_celsius(s_temp_sensor, &t);
+    return t;
+}
 
 #define MODEL_INPUT_W  96
 #define MODEL_INPUT_H  96
@@ -87,6 +135,12 @@ extern "C" void app_main(void)
         ESP_LOGW(TAG, "Synthetic frames will be generated (Wokwi / no-camera build)");
     }
 
+    temp_sensor_init();
+    ESP_LOGI(TAG, "Temperature sensor ready");
+
+    led_strip_init();
+    ESP_LOGI(TAG, "User LED ready (GPIO%d)", USER_LED_GPIO);
+
     inference_init(person_detect_tflite, person_detect_tflite_len,
                    MODEL_INPUT_W, MODEL_INPUT_H);
     ESP_LOGI(TAG, "Inference engine ready");
@@ -140,6 +194,9 @@ extern "C" void app_main(void)
                             ? LABELS[result.class_index]
                             : "unknown";
 
+        bool person = (result.class_index == 1);
+        led_set_detection(person);
+
         printf("  [%4d]  %-12s  score=%4d  |  prep=%dms  infer=%dms  total=%dms%s\n",
                frame_count++, label, (int)result.score,
                prep_ms, infer_ms, total_ms,
@@ -148,7 +205,7 @@ extern "C" void app_main(void)
         if (frame_count % 10 == 0) {
             int64_t now = esp_timer_get_time();
             float fps = 10.0f / ((now - t_last_fps) / 1e6f);
-            printf("  --- %.1f FPS end-to-end ---\n", fps);
+            printf("  --- %.1f FPS end-to-end  chip temp: %.1f°C ---\n", fps, chip_temp_celsius());
             t_last_fps = now;
         }
 
