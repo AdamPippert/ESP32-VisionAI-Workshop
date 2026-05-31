@@ -3,8 +3,12 @@
 **Duration:** 30 minutes  
 **Goal:** Install the toolchain and verify your build environment. If you have hardware, flash the camera test firmware and see a live video stream. If not, verify the build with the Wokwi simulator instead.
 
-> **No physical hardware?** Complete sections 1–3, then jump to the
-> [Wokwi path](#wokwi-path-no-hardware) and skip sections 4–8.
+> **Everyone completes sections 1–4.** Section 4 verifies your toolchain by
+> building the firmware and flashing it into the Wokwi simulator — do this even
+> if you have a board, since it confirms the build chain independently of
+> hardware. **With hardware?** Continue to sections 5–9 to flash a physical
+> board. **No hardware?** You're finished after section 4 — skip to
+> [What's Next](#whats-next).
 
 ---
 
@@ -81,11 +85,15 @@ cd ESP32-VisionAI-Workshop
 
 ---
 
-## Wokwi Path (no hardware)
+## 4. Build and Flash in Wokwi (everyone)
 
-The `camera_test` firmware requires a physical OV3660 and has no simulation
-fallback. Instead, verify your toolchain by building `lab_02` and running it
-in Wokwi — the full TFLM inference pipeline runs with synthetic frames.
+<a name="wokwi-path-no-hardware"></a>
+Before touching hardware, confirm your toolchain end-to-end by building `lab_02`
+and **flashing it into the Wokwi simulator** — the same `.bin` you'd flash to a
+real board. The `camera_test` firmware needs a physical OV3660 and has no
+simulation fallback, so `lab_02` is the verification target: it detects the
+missing camera at runtime and falls back to synthetic frames, exercising the
+full TFLM inference pipeline in the simulator.
 
 **Step 1 — Install the Wokwi VS Code extension**
 
@@ -93,17 +101,22 @@ Open VS Code → Extensions → search **"Wokwi"** → Install. A free account i
 required; sign in at [wokwi.com](https://wokwi.com) and follow the extension's
 "Activate License" prompt.
 
-**Step 2 — Generate the model file and build**
+**Step 2 — Generate the model file and build the firmware**
 
 ```bash
 bash firmware/tools/fetch_model.sh   # downloads person_detect.tflite, generates model_data.cc
 bash firmware/tools/build.sh lab_02 build
 ```
 
-**Step 3 — Start the simulator**
+This produces `firmware/lab_02/build/lab_02.bin` and `lab_02.elf`. The bundled
+`firmware/lab_02/wokwi.toml` already points the simulator at these artifacts —
+no extra configuration needed.
+
+**Step 3 — Flash the firmware into Wokwi and run it**
 
 Open the `firmware/lab_02/` folder in VS Code. Press **F1 → Wokwi: Start
-Simulator**. The serial panel should show:
+Simulator**. Wokwi loads (flashes) `build/lab_02.bin` into the virtual
+ESP32-S3, boots it, and streams the serial output into the panel:
 
 ```
 W (500) lab_02: Camera init failed — entering simulation mode
@@ -113,14 +126,19 @@ W (500) lab_02: Camera init failed — entering simulation mode
   [   1]  no person     score=  47  |  prep=1ms  infer=384ms  total=385ms  [SIM]
 ```
 
-Every line tagged `[SIM]` confirms the toolchain, IDF component manager,
-TFLM, and Wokwi integration are all working.
+Every line tagged `[SIM]` confirms the toolchain, IDF component manager, TFLM,
+and Wokwi flashing pipeline are all working.
 
-**Your checkpoint replaces sections 5–8:** skip to [What's Next](#whats-next).
+> **Rebuilt the firmware?** Wokwi flashes whatever is in `build/` at start time.
+> After any code change, re-run `bash firmware/tools/build.sh lab_02 build` and
+> restart the simulator so it flashes the new `.bin`.
+
+> **No hardware?** This is your setup checkpoint — skip to
+> [What's Next](#whats-next). Sections 5–9 require a physical board.
 
 ---
 
-## 4. Set Your WiFi Credentials (hardware only)
+## 5. Set Your WiFi Credentials (hardware only)
 
 The `camera_test` firmware streams live video over WiFi. Create a local credentials file
 (**not committed to git**):
@@ -136,7 +154,7 @@ Replace `YourNetworkName` and `YourPassword` with your actual WiFi credentials.
 
 ---
 
-## 5. Connect the Board (hardware only)
+## 6. Connect the Board (hardware only)
 
 1. Use the **UART USB-C port** (on most boards this is the port *closer* to the camera
    lens — check the silkscreen or your board's documentation).
@@ -152,20 +170,20 @@ export PORT=/dev/cu.usbserial-110   # macOS example — adjust to your port
 
 ---
 
-## 6. Build and Flash the Camera Test Firmware (hardware only)
+## 7. Build and Flash the Camera Test Firmware (hardware only)
 
 ```bash
 PORT=/dev/cu.usbserial-110 bash firmware/tools/build.sh camera_test flash
 ```
 
-Substitute your port from section 5. Flash takes about 15–20 seconds; the board resets automatically when done.
+Substitute your port from section 6. Flash takes about 15–20 seconds; the board resets automatically when done.
 
 > **Tip:** `build.sh` handles IDF environment setup internally — no need to
 > source `esp_env.sh` or `export.sh` first when using the script.
 
 ---
 
-## 7. Read the Serial Output (hardware only)
+## 8. Read the Serial Output (hardware only)
 
 ```bash
 PORT=/dev/cu.usbserial-110 bash firmware/tools/build.sh camera_test monitor
@@ -184,9 +202,9 @@ Press **Ctrl+]** to exit the monitor.
 
 ---
 
-## 8. View the Camera Stream (hardware only)
+## 9. View the Camera Stream (hardware only)
 
-Open the IP address from step 7 in any browser:
+Open the IP address from section 8 in any browser:
 ```
 http://192.168.x.x
 ```
@@ -197,16 +215,17 @@ You should see a live MJPEG stream from the OV3660 camera at around 25–30 FPS.
 
 ## Checkpoint
 
-**Hardware path:**
+**Everyone (sections 1–4):**
+- [ ] `idf.py --version` prints `ESP-IDF v5.4.1`
+- [ ] `bash firmware/tools/build.sh lab_02 build` completes cleanly
+- [ ] Wokwi simulator starts, flashes `build/lab_02.bin`, and the serial panel shows inference output tagged `[SIM]`
+
+**Additionally, with hardware (sections 5–9):**
 - [ ] `bash firmware/tools/build.sh camera_test build` completes cleanly
 - [ ] Board flashes and boots without errors
+- [ ] Serial shows "Camera init success"
 - [ ] IP address appears in serial output
 - [ ] Live camera stream visible in browser
-- [ ] Serial shows "Camera init success"
-
-**Wokwi path:**
-- [ ] `bash firmware/tools/build.sh lab_02 build` completes cleanly
-- [ ] Wokwi simulator starts and serial panel shows inference output tagged `[SIM]`
 
 ---
 
